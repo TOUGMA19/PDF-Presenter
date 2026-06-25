@@ -16,26 +16,31 @@ class _CloseButton(QPushButton):
     def __init__(self, parent: QWidget, controller):
         super().__init__("✕", parent)
         self.controller = controller
-        self.setFixedSize(44, 44)
-        self.setCursor(Qt.ArrowCursor)
+        self.setFixedSize(52, 52)
+        self.setCursor(Qt.PointingHandCursor)
+        self.setToolTip("Quitter le plein écran (Esc)")
         self.setStyleSheet("""
             QPushButton {
-                background: rgba(220, 50, 50, 0.90);
+                background: rgba(220, 50, 50, 0.92);
                 color: white;
-                border: none;
-                border-radius: 22px;
-                font-size: 18px;
-                font-weight: 700;
+                border: 2px solid rgba(255, 255, 255, 0.30);
+                border-radius: 26px;
+                font-size: 20px;
+                font-weight: 800;
             }
             QPushButton:hover {
-                background: rgba(240, 60, 60, 1.0);
+                background: rgba(255, 60, 60, 1.0);
+                border: 2px solid rgba(255, 255, 255, 0.60);
+            }
+            QPushButton:pressed {
+                background: rgba(180, 40, 40, 1.0);
             }
         """)
         self.setWindowOpacity(0)
         self.hide()
         self.clicked.connect(self._on_click)
 
-        # opacity animation via stylesheet workaround — use a property on parent
+        # opacity animation
         self._opacity = 0.0
 
     def _on_click(self):
@@ -44,25 +49,31 @@ class _CloseButton(QPushButton):
     def set_opacity(self, v: float):
         self._opacity = max(0.0, min(1.0, v))
         alpha = int(self._opacity * 255)
-        bg_a  = int(0.90 * self._opacity * 255)
+        bg_a  = int(0.92 * self._opacity * 255)
+        border_a = int(0.30 * self._opacity * 255)
+        border_hover_a = int(0.60 * self._opacity * 255)
         self.setStyleSheet(f"""
             QPushButton {{
                 background: rgba(220, 50, 50, {bg_a});
                 color: rgba(255,255,255,{alpha});
-                border: none;
-                border-radius: 22px;
-                font-size: 18px;
-                font-weight: 700;
+                border: 2px solid rgba(255, 255, 255, {border_a});
+                border-radius: 26px;
+                font-size: 20px;
+                font-weight: 800;
             }}
             QPushButton:hover {{
-                background: rgba(240, 60, 60, {min(255, bg_a + 30)});
+                background: rgba(255, 60, 60, {min(255, bg_a + 20)});
+                border: 2px solid rgba(255, 255, 255, {border_hover_a});
+            }}
+            QPushButton:pressed {{
+                background: rgba(180, 40, 40, {min(255, bg_a + 10)});
             }}
         """)
         self.setVisible(self._opacity > 0.01)
 
 
 class PublicWindow(QWidget):
-    HIDE_ZONE_HEIGHT = 80   # px from top where cursor triggers the button
+    HIDE_ZONE_HEIGHT = 120   # px from top where cursor triggers the button
 
     def __init__(self, controller):
         super().__init__()
@@ -80,13 +91,13 @@ class PublicWindow(QWidget):
 
         # smooth fade timer
         self._fade_timer = QTimer(self)
-        self._fade_timer.setInterval(16)   # ~60 fps
+        self._fade_timer.setInterval(12)   # ~83 fps for smoother animation
         self._fade_timer.timeout.connect(self._tick_fade)
 
         # hide-after-idle timer
         self._idle_timer = QTimer(self)
         self._idle_timer.setSingleShot(True)
-        self._idle_timer.setInterval(2000)  # 2 s before hiding
+        self._idle_timer.setInterval(2500)  # 2.5 s before hiding
         self._idle_timer.timeout.connect(self._hide_button)
 
         # track mouse only when fullscreen
@@ -125,8 +136,8 @@ class PublicWindow(QWidget):
 
     def _reposition_button(self):
         """Keep the ✕ button in the top-right corner."""
-        margin = 18
-        self._close_btn.move(self.width() - 44 - margin, margin)
+        margin = 24
+        self._close_btn.move(self.width() - 52 - margin, margin)
 
     def mouseMoveEvent(self, ev):
         super().mouseMoveEvent(ev)
@@ -150,7 +161,7 @@ class PublicWindow(QWidget):
             self._fade_timer.start()
 
     def _tick_fade(self):
-        step = 0.08
+        step = 0.12
         if abs(self._opacity - self._target) < step:
             self._opacity = self._target
             self._fade_timer.stop()
